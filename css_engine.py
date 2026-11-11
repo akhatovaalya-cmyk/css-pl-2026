@@ -96,6 +96,7 @@ def parse_1c(path):
         'ctrl_5610': 0.0,
         'tot_income_6': 0.0,
         'tot_expense_7': 0.0,
+        'income_target': 0.0,  # 6010 (ур.1, Кт) — для сверки дохода
         'cost_target': 0.0,    # 7010 (ур.1) — для сверки прямых затрат
         'admin_target': 0.0,   # 7211 (+7210 общий) — сверка админа (вычитаемого)
         'admin7212_target': 0.0,  # 7212 — сверка не относимых на вычеты
@@ -133,6 +134,8 @@ def parse_1c(path):
             if od == 1:
                 if acct == '7010':
                     R['cost_target'] += deb
+                elif acct == '6010':
+                    R['income_target'] += cred
                 # «нижние»/финансовые счета: сумма на строке субсчёта (ур.1)
                 elif acct == '6110':
                     R['deposit'] += cred
@@ -184,6 +187,11 @@ def parse_1c(path):
             continue
 
     # ---- сверка остатков по целям (чтобы блоки сходились точно) ----
+    income_sum = sum(R['income'].values())
+    resid_i = R['income_target'] - income_sum
+    if abs(resid_i) > 1:
+        R['income']['Прочие (без проекта)'] = R['income'].get('Прочие (без проекта)', 0) + resid_i
+        R['proj_raw']['Прочие (без проекта)'].add('без аналитики (<...>)')
     cost_sum = sum(sum(a.values()) for a in R['cost'].values())
     resid = R['cost_target'] - cost_sum
     if abs(resid) > 1:
